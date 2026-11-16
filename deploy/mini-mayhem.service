@@ -1,0 +1,23 @@
+[Unit]
+Description=Mini Mayhem party mini-games server
+Documentation=https://github.com/mochi619ca/mini-mayhem
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/home/aiagent/projdev/mini-mayhem
+Environment=NODE_ENV=production
+Environment=PORT=3000
+ExecStart=/usr/bin/node /home/aiagent/projdev/mini-mayhem/server.js
+Restart=always
+RestartSec=2
+# Rooms live in memory, so a restart drops every room; that is the intended
+# recovery path and a hard stop is safe.
+KillSignal=SIGTERM
+TimeoutStopSec=10
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=default.target

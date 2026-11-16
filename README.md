@@ -60,22 +60,42 @@ timing, which would cost the simultaneous, latency-free feel. For a party game
 among friends this is the right trade; it is not a competitive ranking system.
 
 ## Hosting
-**Live now:** <https://working.tail573a0f.ts.net/> — served from this Mac through
-Tailscale Funnel while `npm start` is running. Works on any phone on any network,
-HTTPS and `wss://` included. It stops when the Mac sleeps or the server stops.
 
-One-click blueprint deploy (the repo is public and `render.yaml` is read
-automatically): <https://render.com/deploy?repo=https://github.com/mochi619ca/mini-mayhem>
+**Live:** <https://flash-ms-7b98.tail573a0f.ts.net:8443/>
 
-That creates a Render free web service (Node runtime, `npm start`, health check
-`/health`); open the link once and the URL is live.
+It runs on the always-on Linux box, not this Mac: a systemd user service
+(`deploy/mini-mayhem.service`) keeps `node server.js` up across crashes, logouts
+and reboots (`Restart=always`, `Linger=yes`, enabled at boot), and Tailscale
+Funnel publishes port 8443 as real HTTPS with `wss://`. Nothing needs a Mac,
+laptop or terminal to stay open.
+
+Change the code, then run one command from anywhere:
+
+```sh
+sh deploy/linux.sh update    # git pull, npm install --omit=dev, restart
+sh deploy/linux.sh status    # active state, PID, health, funnel
+sh deploy/linux.sh install   # first-time setup on a fresh host
+sh deploy/linux.sh remove    # stop, disable, unpublish
+```
+
+Funnel port 8443 is deliberate: 443 on that box is already used by another
+service. `deploy/linux.sh` takes `HOST`, `DIR`, `REPO` and `FUNNEL_PORT` from the
+environment if you need a different host or port.
+
+Rooms live in memory, so a restart (or a crash) drops every room in progress;
+players rejoin with the same code and start a fresh match.
+
+### Other hosts
+`render.yaml` is ready for a Render free web service if you ever want a host with
+no Tailscale dependency:
+<https://render.com/deploy?repo=https://github.com/mochi619ca/mini-mayhem>
 
 Any Node host works: one process, in-memory rooms, a WebSocket upgrade on the
 same port. Free tiers sleep when idle, so the first visitor after a quiet spell
 waits for a cold start.
 
-For a match on the same Wi-Fi, `npm start` and have everyone open
-`http://<your-lan-ip>:3000` — no account, no deploy.
+For a match on one Wi-Fi without any host, `npm start` and open
+`http://<your-lan-ip>:3000`.
 
 ## Mobile notes
 - Fixed viewport, no page scrolling during play, `touch-action: manipulation`,
