@@ -166,6 +166,8 @@ test('memory: correct sequence advances, one wrong answer ends the run', () => {
 
   const s2 = def.newSession({ seed: 'm1', startsAt });
   const at2 = (r) => ({ session: s2, pid: 'p2', at: s2.rounds[r].inputFrom + 300, room: {} });
+  // Skipping ahead must not count: only the round actually reached is accepted.
+  assert.equal(def.covers({ kind: 'answer', round: 3, seq: memoryPattern('m1', 3) }, at2(3)).ok, false, 'round skipped');
   assert.equal(def.covers({ kind: 'answer', round: 0, seq: good }, at2(0)).correct, true);
   assert.equal(def.covers({ kind: 'answer', round: 1, seq: memoryPattern('m1', 1) }, at2(1)).correct, true);
   assert.equal(def.settle(s2, ['p2'])[0].score, 2);
@@ -226,6 +228,20 @@ test('bot results stay inside each game’s legal range', () => {
       if (id === 'stop') assert.ok(r.score > 0);
     }
   }
+});
+
+test('early finish fires only when every player is provably done', () => {
+  // Games that can prove completion must not fire on a partial set.
+  for (const id of ['reaction', 'memory', 'stop', 'stroop']) {
+    const def = GAMES[id];
+    assert.equal(typeof def.complete, 'function', `${id} exposes complete`);
+    const s = def.newSession({ seed: 'done', startsAt: 1_000_000 });
+    assert.equal(def.complete(s, []), false, `${id} empty player list is not complete`);
+    assert.equal(def.complete(s, ['a', 'b']), false, `${id} fresh session is not complete`);
+  }
+  // Target Rush has no provable end, so it intentionally has no predicate and
+  // always runs its full clock.
+  assert.equal(GAMES.targets.complete, undefined);
 });
 
 test('every game exposes a config the client can draw from', () => {

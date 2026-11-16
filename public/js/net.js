@@ -98,7 +98,6 @@ export class Net {
     const best = this.samples.reduce((a, b) => (b.rtt < a.rtt ? b : a));
     this.offset = best.offset;
     this.rtt = Math.round(best.rtt);
-    if (this.samples.length === SAMPLES) this.send({ t: 'rtt', rtt: this.rtt });
   }
 
   now() {

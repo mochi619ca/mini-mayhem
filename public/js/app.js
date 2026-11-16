@@ -34,6 +34,7 @@ const store = {
 let state = null;
 let screen = null; // { el, destroy, onAck, onState, gameId }
 let mountedKey = '';
+let landingSubmit = null;
 const pendingCode = codeFromPath();
 
 function codeFromPath() {
@@ -120,7 +121,8 @@ function renderLanding() {
   landingSubmit = () => (codeInput.value.length === 4 ? join() : create());
 }
 
-let landingSubmit = null;
+// Enter submits only while the landing form is the visible screen; leaving the
+// form clears the shortcut so Enter cannot fire a stale join later.
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Enter' && landingSubmit) landingSubmit();
 });
@@ -459,9 +461,16 @@ function render() {
     case 'countdown':
       break;
     case 'play':
+    case 'settling':
       clearOverlay();
       mountGame();
       screen?.refreshPlace?.();
+      // A phone that sleeps through the countdown wakes into a running game
+      // with no stage at all; mount again if the element is gone.
+      if (!document.querySelector('[data-game]')) {
+        mountedKey = '';
+        mountGame();
+      }
       break;
     case 'result': {
       const key = `result:${s.gameIndex}:${s.game?.id}:${s.standings.map((p) => p.points).join(',')}`;
@@ -508,6 +517,7 @@ net.on('msg', (msg) => {
 });
 
 net.on('joined', (msg) => {
+  landingSubmit = null;
   saveIdentity(msg.code, msg.token);
   pushPath(msg.code);
 });

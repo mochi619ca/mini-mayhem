@@ -74,7 +74,7 @@ const send = (ws, obj) => ws.readyState === 1 && ws.send(JSON.stringify(obj));
 // ---------- Rooms ----------
 const rooms = new Map();
 
-function newRoom(hostName) {
+function newRoom() {
   let code;
   do code = newCode();
   while (rooms.has(code));
@@ -85,8 +85,6 @@ function newRoom(hostName) {
     phase: 'lobby', // lobby | countdown | play | result | finale
     gameIndex: -1,
     matchNo: 0,
-    usesBots: false,
-    startedAt: 0,
     startsAt: 0,
     endsAt: 0,
     seed: null,
@@ -95,7 +93,6 @@ function newRoom(hostName) {
     timers: new Set(),
     advanceTimer: null,
     lastActive: Date.now(),
-    createdAt: Date.now(),
   };
   rooms.set(code, room);
   return room;
@@ -137,7 +134,6 @@ function addPlayer(room, name, { bot = false } = {}) {
     bestFinish: null,
     sockets: new Set(),
     joinedAt: Date.now(),
-    rtt: 120,
     lastSeen: Date.now(),
   };
   room.players.set(player.id, player);
@@ -192,6 +188,7 @@ function nextGame(room) {
   const def = GAMES[id];
   const startsAt = Date.now() + COUNTDOWN_MS;
   room.phase = 'countdown';
+  room.ending = false;
   room.startsAt = startsAt;
   room.endsAt = startsAt + def.total;
   room.session = def.newSession({ seed: `${room.seed}:${room.matchNo}:${id}`, startsAt });
@@ -206,7 +203,28 @@ function nextGame(room) {
   later(room, COUNTDOWN_MS + def.total + SETTLE_GRACE_MS, () => settle(room));
 }
 
+// Everyone is done with the running game: do not make them sit out the rest of
+// the clock. Only games that can prove it (every player tapped, every player out
+// of attempts, every pattern solved) call this; the rest simply run to the end.
+function maybeSettleEarly(room) {
+  if (room.phase !== 'play') return;
+  const s = room.session;
+  if (!s) return;
+  const def = GAMES[s.gameId];
+  if (!def.complete) return;
+  const humans = [...room.players.values()].filter((p) => !p.bot).map((p) => p.id);
+  if (!humans.length || !def.complete(s, humans)) return;
+  if (room.ending) return;
+  room.ending = true;
+  room.phase = 'settling';
+  broadcast(room);
+  later(room, SETTLE_GRACE_MS, () => settle(room));
+}
+
 function settle(room) {
+  // A game settles exactly once: either everyone finished early or the clock ran
+  // out. Without this guard both timers would award the same points twice.
+  if (room.phase !== 'play' && room.phase !== 'settling') return;
   const def = GAMES[room.gameId];
   // Every human in the room is scored, even one whose phone dropped mid-game:
   // their taps already happened, and dropping should not erase points.
@@ -230,6 +248,7 @@ function settle(room) {
     if (p.bestFinish === null || place < p.bestFinish) p.bestFinish = place;
   });
 
+  room.ending = false;
   room.phase = 'result';
   room.results = {
     gameId: room.gameId,
@@ -291,7 +310,7 @@ function viewFor(room, me) {
   };
 
   const s = room.session;
-  if (s && ['countdown', 'play', 'result'].includes(room.phase)) {
+  if (s && ['countdown', 'play', 'settling', 'result'].includes(room.phase)) {
     view.session = {
       gameId: s.gameId,
       config: GAMES[s.gameId].config(s),
@@ -494,7 +513,7 @@ function handle(ws, msg) {
       break;
     }
     case 'event': {
-      if (room.phase !== 'play') return;
+      if (room.phase !== 'play' && room.phase !== 'settling') return;
       const s = room.session;
       if (!s) return;
       if (player.bot) return;
@@ -504,14 +523,7 @@ function handle(ws, msg) {
       if (!res.ok) return;
       send(ws, { t: 'ack', kind: msg.kind, ...res });
       broadcast(room);
-      break;
-    }
-    case 'rtt': {
-      const rtt = Number(msg.rtt);
-      if (Number.isFinite(rtt) && rtt >= 0 && rtt < 5000) {
-        player.rtt = Math.round(rtt);
-        player.lastSeen = Date.now();
-      }
+      maybeSettleEarly(room);
       break;
     }
     case 'leave': {
@@ -567,6 +579,6 @@ setInterval(() => {
   }
 }, 30000).unref();
 
-server.listen(PORT, () => console.log(`Mini Mayhem on http://localhost:${PORT}`));
+server.listen(PORT, () => console.log(`Mini Mayhem on http://localhost:${server.address().port}`));
 
 export { server, rooms };
