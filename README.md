@@ -43,6 +43,17 @@ What each screen shows and how to capture it: `docs/screens.md`.
 
 Rooms live in memory: restarting the server ends every room.
 
+## Fairness, and what it does not defend against
+Every phone receives the same board (`plan`, `patterns`, `colors`) so it can draw
+it without a round trip, and the server re-derives that board to judge each claim.
+A consequence: a scripted client could read the target list and strike every
+target instantly, or pre-compute the Colour Clash answers. The server still bounds
+what is possible — one hit per target, one answer per prompt, taps inside the
+target's own lifetime, three stop attempts — but it cannot hide a board it must
+broadcast. Closing that would mean per-player hidden state or per-tap server
+timing, which would cost the simultaneous, latency-free feel. For a party game
+among friends this is the right trade; it is not a competitive ranking system.
+
 ## Hosting
 One-click blueprint deploy (the repo is public and `render.yaml` is read
 automatically): <https://render.com/deploy?repo=https://github.com/mochi619ca/mini-mayhem>
