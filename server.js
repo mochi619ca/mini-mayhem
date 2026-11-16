@@ -360,7 +360,7 @@ function matchStandings(room) {
         (a.bestFinish ?? 99) - (b.bestFinish ?? 99) ||
         a.joinedAt - b.joinedAt,
     )
-    .map((p, i) => ({ id: p.id, name: p.name, points: p.points, bestFinish: p.bestFinish, rank: i + 1, bot: !!p.bot }));
+    .map((p, i) => ({ id: p.id, name: p.name, points: p.points, rank: i + 1, bot: !!p.bot }));
 }
 
 // ---------- WebSocket ----------
