@@ -1,0 +1,19 @@
+{
+  "name": "mini-mayhem",
+  "version": "1.0.0",
+  "description": "Online party mini-games for phones: five simultaneous games, points, one champion",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node --test test/*.test.js"
+  },
+  "keywords": ["party", "multiplayer", "minigames", "websocket"],
+  "license": "ISC",
+  "type": "module",
+  "dependencies": {
+    "ws": "^8.18.0"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
