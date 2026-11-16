@@ -63,7 +63,7 @@ among friends this is the right trade; it is not a competitive ranking system.
 
 **Live:** <https://flash-ms-7b98.tail573a0f.ts.net:8443/>
 
-It runs on the always-on Linux box, not this Mac: a systemd user service
+It runs on the always-on Linux box (Node 22), not this Mac: a systemd user service
 (`deploy/mini-mayhem.service`) keeps `node server.js` up across crashes, logouts
 and reboots (`Restart=always`, `Linger=yes`, enabled at boot), and Tailscale
 Funnel publishes port 8443 as real HTTPS with `wss://`. Nothing needs a Mac,
