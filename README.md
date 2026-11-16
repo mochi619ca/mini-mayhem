@@ -44,10 +44,15 @@ What each screen shows and how to capture it: `docs/screens.md`.
 Rooms live in memory: restarting the server ends every room.
 
 ## Hosting
-`render.yaml` deploys it as a Render free web service (Node runtime, `npm start`,
-health check `/health`). Any Node host works: one process, in-memory rooms, a
-WebSocket upgrade on the same port. Free tiers sleep when idle, so the first
-visitor after a quiet spell waits for a cold start.
+One-click blueprint deploy (the repo is public and `render.yaml` is read
+automatically): <https://render.com/deploy?repo=https://github.com/mochi619ca/mini-mayhem>
+
+That creates a Render free web service (Node runtime, `npm start`, health check
+`/health`); open the link once and the URL is live.
+
+Any Node host works: one process, in-memory rooms, a WebSocket upgrade on the
+same port. Free tiers sleep when idle, so the first visitor after a quiet spell
+waits for a cold start.
 
 For a match on the same Wi-Fi, `npm start` and have everyone open
 `http://<your-lan-ip>:3000` — no account, no deploy.

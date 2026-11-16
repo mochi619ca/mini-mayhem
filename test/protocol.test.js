@@ -80,15 +80,17 @@ test('two players complete a full five-game match over the wire', async (t) => {
   for (let guard = 0; Date.now() < deadline; guard++) {
     const sa = a.lastState;
     const sb = b.lastState;
-    // Both phones are broadcast the same state change, but the test reads each
-    // socket's cached last message at a different instant, so a one-step lag is
-    // expected. A cross-game difference would be a real desync.
-    assert.equal(sa.game?.id ?? null, sb.game?.id ?? null, 'both phones see the same game');
-    const lag = [sa.phase, sb.phase].sort().join('/');
-    assert.ok(
-      sa.phase === sb.phase || ['play/result', 'play/settling', 'countdown/play', 'result/settling'].includes(lag),
-      `phases differ across a boundary: ${lag}`,
-    );
+    // Both phones are broadcast every change, but the test samples each socket's
+    // cached last message at a slightly different instant, so a hop across a
+    // boundary is expected. Sustained disagreement is the real signal, so the
+    // check is that the two converge within a couple of ticks.
+    if (sa.game?.id !== sb.game?.id || sa.phase !== sb.phase) {
+      await wait(200);
+      const sa2 = a.lastState;
+      const sb2 = b.lastState;
+      assert.equal(sa2.game?.id ?? null, sb2.game?.id ?? null, 'phones converge on the same game');
+      assert.equal(sa2.phase, sb2.phase, 'phones converge on the same phase');
+    }
 
     if ((sa.phase === 'play' || sa.phase === 'settling') && sa.game) {
       const id = sa.game.id;

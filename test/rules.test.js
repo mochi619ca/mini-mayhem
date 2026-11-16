@@ -229,7 +229,9 @@ test('stroop: answers must arrive in order and score +10/-5', () => {
 
   assert.equal(def.covers({ kind: 'answer', i: 1, choice: 0 }, ctx()).ok, false, 'out of order');
   assert.equal(def.covers({ kind: 'answer', i: 0, choice: ink }, ctx()).correct, true);
-  assert.equal(def.covers({ kind: 'answer', i: 0, choice: ink }, ctx()).ok, false, 'repeat');
+  const repeat = def.covers({ kind: 'answer', i: 0, choice: ink }, ctx());
+  assert.equal(repeat.stale, true, 'a repeat answers with the true progress instead of silence');
+  assert.equal(s.at.get('p1'), 1, 'a repeat does not double-score');
   assert.equal(def.covers({ kind: 'answer', i: 1, choice: wrong }, ctx()).correct, false);
   const row = def.settle(s, ['p1'])[0];
   assert.equal(row.score, 5);
@@ -280,4 +282,23 @@ test('every game exposes a config the client can draw from', () => {
     assert.ok(def.total > 0, `${id} total`);
     assert.ok(Array.isArray(def.how) && def.how.length >= 2, `${id} how`);
   }
+});
+
+test('stroop heals a lost ack: a duplicate answer reports the true progress', () => {
+  const def = GAMES.stroop;
+  const s = def.newSession({ seed: 'heal', startsAt: 1_000_000 });
+  const ctx = (ev) => ({ session: s, pid: 'p1', at: 1_000_100, room: {} });
+  const ink = s.plan[0].ink;
+
+  const first = def.covers({ kind: 'answer', i: 0, choice: ink }, ctx());
+  assert.equal(first.correct, true);
+  // The phone never saw that ack and retries the same question.
+  const retry = def.covers({ kind: 'answer', i: 0, choice: ink }, ctx());
+  assert.equal(retry.ok, true, 'retry answers with a healing payload');
+  assert.equal(retry.stale, true);
+  assert.equal(retry.done, 1, 'points at the next question');
+  assert.equal(retry.score, 10, 'carries the real score');
+  assert.equal(s.at.get('p1'), 1, 'no double advance');
+  // A forward skip is still rejected: healing must not become a shortcut.
+  assert.equal(def.covers({ kind: 'answer', i: 5, choice: 0 }, ctx()).ok, false);
 });

@@ -89,6 +89,16 @@ export function render(session, net, api) {
       if (ack.kind !== 'answer') return;
       clearTimeout(unlockTimer);
       locked = false;
+      if (ack.stale) {
+        // Our last answer did land; the reply was lost. Adopt the server's state
+        // rather than replaying a question that is already scored.
+        i = ack.done;
+        right = ack.right;
+        wrong = ack.wrong;
+        score.textContent = String(ack.score);
+        paintWord();
+        return;
+      }
       if (ack.correct) {
         right++;
         sGood();
