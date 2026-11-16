@@ -162,6 +162,7 @@ input:focus { border-color: var(--accent2); }
 .standrow { display: flex; align-items: center; gap: 8px; font-size: 13px; padding: 5px 2px; }
 .standrow .nm { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .standrow .pt { font-weight: 750; font-variant-numeric: tabular-nums; }
+.standrow .dt { font-variant-numeric: tabular-nums; }
 
 /* ---------- Finale ---------- */
 .trophy { font-size: 84px; text-align: center; line-height: 1; }

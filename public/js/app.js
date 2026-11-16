@@ -342,6 +342,7 @@ function renderResult() {
         { class: 'standrow' },
         h('span', { class: 'tag', text: `#${p.rank}` }),
         h('span', { class: 'nm', text: p.name }),
+        h('span', { class: 'dt', style: { fontSize: '11px', color: 'var(--muted)' }, text: `${p.wins ?? 0}W` }),
         h('span', { class: 'pt', text: `${p.points} pts` }),
       ),
     ),
@@ -427,6 +428,8 @@ function renderFinale() {
         { class: 'standrow' },
         h('span', { class: 'tag', text: p.rank === 1 && drawn ? '=' : `#${p.rank}` }),
         h('span', { class: 'nm', text: p.name }),
+        // Equal points but different places: show why, or the table looks broken.
+        h('span', { class: 'dt', style: { fontSize: '11px', color: 'var(--muted)' }, text: `${p.wins ?? 0}W` }),
         h('span', { class: 'pt', text: `${p.points} pts` }),
       ),
     ),
