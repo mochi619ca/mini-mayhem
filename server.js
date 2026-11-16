@@ -11,6 +11,7 @@ import { WebSocketServer } from 'ws';
 
 import { GAMES, GAME_IDS, gameMeta } from './lib/games.js';
 import { finishOrder } from './lib/rank.js';
+import { matchStandings } from './lib/standings.js';
 import { mulberry32, hash32 } from './shared/games.js';
 
 const ROOT = path.dirname(fileURLToPath(import.meta.url));
@@ -127,6 +128,7 @@ function addPlayer(room, name, { bot = false } = {}) {
     name,
     bot,
     points: 0,
+    wins: 0,
     bestFinish: null,
     sockets: new Set(),
     joinedAt: Date.now(),
@@ -163,6 +165,7 @@ function startMatch(room) {
   room.seed = crypto.randomUUID().slice(0, 8);
   for (const p of room.players.values()) {
     p.points = 0;
+    p.wins = 0;
     p.bestFinish = null;
   }
   nextGame(room);
@@ -240,6 +243,7 @@ function settle(room) {
     if (!p) return;
     p.points += pointsOf.get(row.id);
     const place = placeOf.get(row.id);
+    if (place === 1) p.wins++;
     if (p.bestFinish === null || place < p.bestFinish) p.bestFinish = place;
   });
 
@@ -299,7 +303,7 @@ function viewFor(room, me) {
     startsAt: room.startsAt,
     endsAt: room.endsAt,
     results: room.phase === 'result' ? publicResults(room) : null,
-    standings: matchStandings(room),
+    standings: matchStandings(room.players.values()),
   };
 
   const s = room.session;
@@ -341,19 +345,6 @@ function broadcast(room) {
     const msg = JSON.stringify(viewFor(room, p.id));
     for (const ws of p.sockets) if (ws.readyState === 1) ws.send(msg);
   }
-}
-
-// Total points decide the champion; equal totals are split by the better single
-// result, then by who joined first so the order is never arbitrary.
-function matchStandings(room) {
-  return [...room.players.values()]
-    .sort(
-      (a, b) =>
-        b.points - a.points ||
-        (a.bestFinish ?? 99) - (b.bestFinish ?? 99) ||
-        a.joinedAt - b.joinedAt,
-    )
-    .map((p, i) => ({ id: p.id, name: p.name, points: p.points, rank: i + 1, bot: !!p.bot }));
 }
 
 // ---------- WebSocket ----------

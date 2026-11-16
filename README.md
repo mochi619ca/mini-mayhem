@@ -60,6 +60,10 @@ timing, which would cost the simultaneous, latency-free feel. For a party game
 among friends this is the right trade; it is not a competitive ranking system.
 
 ## Hosting
+**Live now:** <https://working.tail573a0f.ts.net/> — served from this Mac through
+Tailscale Funnel while `npm start` is running. Works on any phone on any network,
+HTTPS and `wss://` included. It stops when the Mac sleeps or the server stops.
+
 One-click blueprint deploy (the repo is public and `render.yaml` is read
 automatically): <https://render.com/deploy?repo=https://github.com/mochi619ca/mini-mayhem>
 

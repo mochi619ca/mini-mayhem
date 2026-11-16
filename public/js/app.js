@@ -398,6 +398,11 @@ function renderFinale() {
   const champ = s.standings[0];
   const top = s.standings.slice(0, 3);
   const max = Math.max(1, ...s.standings.map((p) => p.points));
+  // A drawn match has more than one player in first place. Say so, and never
+  // tell either of them they won it alone.
+  const coChampions = s.standings.filter((p) => p.rank === 1);
+  const drawn = coChampions.length > 1;
+  const iAmChampion = coChampions.some((p) => p.id === s.me);
 
   const podium = h(
     'div',
@@ -417,18 +422,36 @@ function renderFinale() {
     'div',
     { class: 'standings' },
     s.standings.map((p) =>
-      h('div', { class: 'standrow' }, h('span', { class: 'tag', text: `#${p.rank}` }), h('span', { class: 'nm', text: p.name }), h('span', { class: 'pt', text: `${p.points} pts` })),
+      h(
+        'div',
+        { class: 'standrow' },
+        h('span', { class: 'tag', text: p.rank === 1 && drawn ? '=' : `#${p.rank}` }),
+        h('span', { class: 'nm', text: p.name }),
+        h('span', { class: 'pt', text: `${p.points} pts` }),
+      ),
     ),
   );
 
-  const iWon = champ?.id === s.me;
+  const iWon = iAmChampion && !drawn;
   const el = h(
     'div',
     { style: { display: 'flex', flexDirection: 'column', flex: '1', minHeight: '0', gap: '8px' } },
     h('div', { class: 'trophy', text: iWon ? '🏆' : '🎉' }),
     h('div', { class: 'center tiny', style: { marginTop: '4px' }, text: 'Champion' }),
-    h('div', { class: 'champ', style: { color: iWon ? 'var(--warning)' : '' }, text: iWon ? 'You win!' : champ?.name ?? '—' }),
-    h('div', { class: 'center muted', style: { fontSize: '13px' }, text: `${champ?.points ?? 0} points across five games` }),
+    h('div', {
+      class: 'champ',
+      style: { color: iAmChampion ? 'var(--warning)' : '' },
+      text: drawn
+        ? `${coChampions.map((p) => p.name).join(' & ')} draw`
+        : iAmChampion
+          ? 'You win!'
+          : champ?.name ?? '—',
+    }),
+    h('div', {
+      class: 'center muted',
+      style: { fontSize: '13px' },
+      text: drawn ? `${champ?.points ?? 0} points each — nobody broke the tie` : `${champ?.points ?? 0} points across five games`,
+    }),
     podium,
     h('div', { class: 'grow scroll' }, standings),
     s.isHost

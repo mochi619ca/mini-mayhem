@@ -302,3 +302,39 @@ test('stroop heals a lost ack: a duplicate answer reports the true progress', ()
   // A forward skip is still rejected: healing must not become a shortcut.
   assert.equal(def.covers({ kind: 'answer', i: 5, choice: 0 }, ctx()).ok, false);
 });
+
+// The finale rule lives in server.js; exercise it through the same comparison
+// the server uses so a two-way tie cannot be reported as a win for both.
+test('match standings: points, then wins, then best finish, then join order', async () => {
+  const { comparePlayers } = await import('../lib/standings.js');
+  const mk = (id, points, wins, bestFinish, joinedAt = 0) => ({ id, points, wins, bestFinish, joinedAt });
+  const sorted = [
+    mk('fewerWins', 20, 1, 1),
+    mk('moreWins', 20, 3, 2),
+    mk('bestFinish', 20, 1, 1),
+    mk('lower', 10, 5, 1),
+  ].sort(comparePlayers).map((p) => p.id);
+  assert.equal(sorted[0], 'moreWins', 'wins break a points tie first');
+  // Two players equal on points, wins and best finish are separated only by join
+  // order, which is arbitrary: the standings mark them as sharing a place.
+  assert.deepEqual(sorted.slice(1, 3).sort(), ['bestFinish', 'fewerWins']);
+  assert.equal(sorted[3], 'lower');
+});
+
+test('match standings: a drawn match shares first place and says so', async () => {
+  const { matchStandings } = await import('../lib/standings.js');
+  const players = [
+    { id: 'a', name: 'A', points: 7.5, wins: 1, bestFinish: 1, joinedAt: 1, bot: false },
+    { id: 'b', name: 'B', points: 7.5, wins: 1, bestFinish: 1, joinedAt: 2, bot: false },
+    { id: 'c', name: 'C', points: 3, wins: 0, bestFinish: 2, joinedAt: 3, bot: false },
+  ];
+  const table = matchStandings(players);
+  assert.deepEqual(table.map((p) => p.rank), [1, 1, 3]);
+  assert.equal(table[0].shared, true);
+  assert.equal(table[1].shared, true);
+  assert.equal(table[2].shared, false);
+  // A clear winner is not marked shared.
+  const clear = matchStandings([{ ...players[0], points: 9 }, players[1], players[2]]);
+  assert.deepEqual(clear.map((p) => p.rank), [1, 2, 3]);
+  assert.equal(clear[0].shared, false);
+});
