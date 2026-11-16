@@ -23,7 +23,9 @@ The host can add bots to fill empty seats.
 
 Finish-order points: with *n* players, 1st gets *n* points and last gets 1.
 Exact ties share the averaged points. After all five games the highest total
-wins; ties on total points are broken by best single-game finish.
+wins; ties on total points are broken by best single-game finish. A game ends as
+soon as every player is provably finished with it (everyone tapped, everyone is
+out of attempts, or everyone is solved), so a match does not sit on a clock.
 
 ## Screens
 What each screen shows and how to capture it: `docs/screens.md`.
@@ -39,7 +41,10 @@ What each screen shows and how to capture it: `docs/screens.md`.
 - `lib/rank.js`: finish-order point awarding with averaged ties.
 - `public/`: the client. No build step. `js/net.js` syncs the phone clock to the
   server so all screens start and end a game together.
-- `test/rules.test.js`: rules, validation and scoring tests (`npm test`).
+- `test/`: `rules.test.js` (rules, validation, scoring, rank maths), `client.test.js`
+  (module shape and import graph), `protocol.test.js` and `reconnect.test.js`
+  (two real sockets playing a full match, and a phone rejoining its seat).
+  `npm test` runs all of them.
 
 Rooms live in memory: restarting the server ends every room.
 
