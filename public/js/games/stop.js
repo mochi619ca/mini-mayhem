@@ -1,6 +1,9 @@
 // Precision Stop: the bar sweeps; tap to stop it near the centre. 3 attempts.
 import { h, buzz } from '../dom.js';
 import { sGood, sBad, sTick } from '../sound.js';
+// The same module the server scores with. From /js/games/ this URL resolves to
+// /shared/games.js in the browser and to shared/games.js on disk under Node.
+import { stopPos } from '../../../shared/games.js';
 
 export function render(session, net, api) {
   const { el, body, timer, prog } = api.shell();
@@ -39,10 +42,7 @@ export function render(session, net, api) {
     timer.textContent = `${Math.max(0, (api.endsAt - now) / 1000).toFixed(1)}s`;
     prog.style.width = `${Math.min(100, ((now - api.startsAt) / (api.endsAt - api.startsAt)) * 100)}%`;
     if (finished) return;
-    const period = cfg.period;
-    const phase = ((((now - api.startsAt) / period) % 1) + 1) % 1;
-    const pos = phase < 0.5 ? phase * 2 : 2 - phase * 2;
-    bar.style.left = `${pos * 100}%`;
+    bar.style.left = `${stopPos(api.startsAt, now, cfg.period) * 100}%`;
   }
 
   function tap(e) {

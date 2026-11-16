@@ -35,6 +35,7 @@ export function render(session, net, api) {
   let wrong = session.mine?.wrong ?? 0;
   let locked = false;
   let finished = false;
+  let unlockTimer = null;
 
   function paintWord() {
     if (i >= plan.length) {
@@ -60,6 +61,12 @@ export function render(session, net, api) {
     api.send({ kind: 'answer', i, choice });
     btn.style.outline = '3px solid #fff';
     setTimeout(() => (btn.style.outline = ''), 140);
+    // A send during a reconnect is dropped by design, so an unanswered tap must
+    // release the lock on its own; otherwise the screen freezes for the round.
+    clearTimeout(unlockTimer);
+    unlockTimer = setTimeout(() => {
+      locked = false;
+    }, 1400);
   }
 
   function paint() {
@@ -80,6 +87,7 @@ export function render(session, net, api) {
     el,
     onAck(ack) {
       if (ack.kind !== 'answer') return;
+      clearTimeout(unlockTimer);
       locked = false;
       if (ack.correct) {
         right++;
@@ -105,6 +113,7 @@ export function render(session, net, api) {
     },
     destroy() {
       clearInterval(iv);
+      clearTimeout(unlockTimer);
     },
   };
 }

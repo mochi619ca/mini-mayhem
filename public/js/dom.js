@@ -18,12 +18,11 @@ export function h(tag, props = {}, ...kids) {
   return el;
 }
 
-export const $ = (sel, root = document) => root.querySelector(sel);
+// Returns the element so `clear(app).append(...)` reads as one statement.
 export const clear = (el) => {
   el.replaceChildren();
   return el;
 };
-export const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
 let toastTimer = null;
 export function toast(text, ms = 2200) {

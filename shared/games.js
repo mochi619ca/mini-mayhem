@@ -141,12 +141,6 @@ export function stroopPlan(seed) {
   return items;
 }
 
-// ---------- Match scoring ----------
+// ---------- Game order ----------
+// The server and every phone must agree on the match order, so it lives here.
 export const GAME_ORDER = ['reaction', 'targets', 'memory', 'stop', 'stroop'];
-
-// Finish-order points: with n players, 1st gets n and last gets 1.
-export function rankEntries(entries) {
-  return entries
-    .map((e, i) => ({ ...e, i }))
-    .sort((a, b) => b.score - a.score || (a.tiebreak ?? 0) - (b.tiebreak ?? 0) || a.i - b.i);
-}

@@ -6,6 +6,9 @@ export function render(session, net, api) {
   const { el, body, timer, prog } = api.shell();
   // The server chose the lead-in; goAt must come from it, never from a local timer.
   const goAt = api.startsAt + (session.config?.leadMs ?? 2000);
+  // The server stops accepting at this instant. The screen must close at the same
+  // moment, or a tap looks accepted here and settles as "No tap" on the server.
+  const closeAt = goAt + (session.config?.windowMs ?? 3000);
   const area = h('div', { class: 'react' }, h('div', { class: 'msg', text: 'Wait for green…' }));
   body.append(area);
 
@@ -13,6 +16,7 @@ export function render(session, net, api) {
   let state = 'wait';
   let tapped = !!session.mine?.tapped;
   let early = !!session.mine?.early;
+  let closed = false;
 
   // Rejoining mid-game: show what already happened instead of re-arming.
   if (tapped) {
@@ -33,14 +37,28 @@ export function render(session, net, api) {
       sGo();
       buzz(30);
     }
+    // Past the deadline a tap cannot be scored, so stop offering one.
+    if (state === 'armed' && !closed && now >= closeAt) {
+      closed = true;
+      area.className = 'react';
+      msg.innerHTML = 'Too slow<div class="sub">You missed the window</div>';
+    }
   }
 
   const tap = (e) => {
     e.preventDefault();
     api.unlock();
     if (tapped) return;
-    tapped = true;
     const now = net.now();
+    if (closed || now >= closeAt) {
+      // Refuse locally: the server would reject it and settle a misleading "No tap".
+      tapped = true;
+      area.className = 'react';
+      msg.innerHTML = 'Too slow<div class="sub">You missed the window</div>';
+      sBad();
+      return;
+    }
+    tapped = true;
     if (state === 'wait') {
       // Send it anyway; the server stamps the true verdict from its own clock.
       api.send({ kind: 'tap', early: true });

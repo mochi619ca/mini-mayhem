@@ -49,13 +49,9 @@ const server = http.createServer((req, res) => {
     res.end('ok');
     return;
   }
-  // Shared modules must resolve for the browser.
-  if (url.pathname.startsWith('/shared/')) {
-    const file = path.join(SHARED, path.normalize(url.pathname.slice('/shared/'.length)));
-    if (file.startsWith(SHARED) && fs.existsSync(file) && fs.statSync(file).isFile()) return serveFile(res, file);
-    res.writeHead(404).end('not found');
-    return;
-  }
+  // The browser imports the same board-generation module the server validates
+  // against, so the two can never disagree about a target or a pattern.
+  if (url.pathname === '/shared/games.js') return serveFile(res, path.join(SHARED, 'games.js'));
   const clean = path.normalize(url.pathname).replace(/^(\.\.[/\\])+/, '');
   let file = path.join(PUBLIC, clean);
   if (!file.startsWith(PUBLIC) || !fs.existsSync(file) || fs.statSync(file).isDirectory()) {
@@ -134,7 +130,6 @@ function addPlayer(room, name, { bot = false } = {}) {
     bestFinish: null,
     sockets: new Set(),
     joinedAt: Date.now(),
-    lastSeen: Date.now(),
   };
   room.players.set(player.id, player);
   return player;
@@ -303,8 +298,6 @@ function viewFor(room, me) {
     serverNow: Date.now(),
     startsAt: room.startsAt,
     endsAt: room.endsAt,
-    countdownMs: COUNTDOWN_MS,
-    resultMs: RESULT_MS,
     results: room.phase === 'result' ? publicResults(room) : null,
     standings: matchStandings(room),
   };
@@ -434,7 +427,6 @@ function handle(ws, msg) {
 
     if (ws.ctx) detach(ws);
     player.sockets.add(ws);
-    player.lastSeen = Date.now();
     ws.ctx = { room, player };
     ensureHost(room);
 
@@ -458,7 +450,9 @@ function handle(ws, msg) {
     }
     case 'removeBot': {
       if (!isHost || room.phase !== 'lobby') return;
-      const bot = [...room.players.values()].find((p) => p.bot);
+      // Remove the newest bot: the host pressed the button next to the last one.
+      const bots = [...room.players.values()].filter((p) => p.bot);
+      const bot = bots.at(-1);
       if (bot) room.players.delete(bot.id);
       break;
     }
@@ -522,7 +516,8 @@ function handle(ws, msg) {
       const res = def.covers(msg, { session: s, pid: me, at: Date.now(), room });
       if (!res.ok) return;
       send(ws, { t: 'ack', kind: msg.kind, ...res });
-      broadcast(room);
+      // The broadcast after the switch covers this event; settling early may
+      // also change phase, so it runs first and its own broadcast wins.
       maybeSettleEarly(room);
       break;
     }
@@ -553,7 +548,6 @@ function drop(ws) {
   const { room, player } = ctx;
   ws.ctx = null;
   player.sockets.delete(ws);
-  player.lastSeen = Date.now();
   // Keep the seat (and its points) for a rejoin; remove only lobby ghosts.
   if (room.phase === 'lobby' && !online(player)) room.players.delete(player.id);
   ensureHost(room);

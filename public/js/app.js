@@ -32,7 +32,7 @@ const store = {
 };
 
 let state = null;
-let screen = null; // { el, destroy, onAck, onState, gameId }
+let screen = null; // { el, destroy, onAck, gameId }
 let mountedKey = '';
 let landingSubmit = null;
 const pendingCode = codeFromPath();
@@ -142,6 +142,10 @@ function renderLobby() {
         {},
         h('i', { class: `dot${p.online || p.bot ? '' : ' off'}` }),
         h('span', { class: 'pname', text: p.name }),
+        // Bots leave with "− Bot"; a human gets an explicit small remove control.
+        isHost && p.id !== s.me && !p.bot
+          ? h('button', { class: 'tag', 'aria-label': `Remove ${p.name}`, onclick: () => net.send({ t: 'kick', id: p.id }), text: '×', style: { cursor: 'pointer', fontSize: '14px', padding: '2px 8px' } })
+          : null,
         p.id === s.me ? h('span', { class: 'tag me', text: 'you' }) : null,
         p.bot ? h('span', { class: 'tag bot', text: 'bot' }) : null,
         p.isHost ? h('span', { class: 'tag host', text: 'host' }) : null,
@@ -156,6 +160,11 @@ function renderLobby() {
       h('div', { class: 'g' }, h('span', { class: 'ico', text: g.icon }), h('div', {}, h('div', { class: 't', text: g.title }), h('div', { class: 's', text: g.tagline }))),
     ),
   );
+
+  // "+ Bot" is the only way two people can play the five games tonight, so it
+  // reads as a real action and disappears once the room is full.
+  const canAddBot = s.players.length < 12;
+  const humanCount = s.players.filter((p) => !p.bot).length;
 
   const share = async () => {
     const text = `Join me on Mini Mayhem — code ${s.code}`;
@@ -174,6 +183,8 @@ function renderLobby() {
   };
 
   const botify = () => net.send({ t: 'addBot' });
+  const unbottify = () => net.send({ t: 'removeBot' });
+  const botCount = s.players.filter((p) => p.bot).length;
 
   const el = h(
     'div',
@@ -193,8 +204,15 @@ function renderLobby() {
         ? h(
             'div',
             { class: 'row', style: { marginTop: '10px' } },
-            h('button', { class: 'btn', style: { flex: '0 0 auto', padding: '14px 16px' }, onclick: botify, text: '+ Bot', title: 'Add a bot' }),
-            h('button', { class: 'btn primary', style: { flex: '1 1 auto' }, onclick: () => net.send({ t: 'start' }), text: s.players.length < 2 ? 'Need 2+ players' : 'Start match', disabled: s.players.length < 2 }),
+            h('button', { class: 'btn', style: { flex: '0 0 auto', padding: '14px 16px' }, onclick: botify, text: '+ Bot', title: 'Add a bot', disabled: !canAddBot }),
+            botCount > 0 ? h('button', { class: 'btn ghost', style: { flex: '0 0 auto', padding: '14px 16px' }, onclick: unbottify, text: '− Bot', title: 'Remove a bot' }) : null,
+            h('button', {
+              class: 'btn primary',
+              style: { flex: '1 1 auto' },
+              onclick: () => net.send({ t: 'start' }),
+              text: s.players.length < 2 ? 'Need 2+ players' : humanCount === 1 && s.players.length > 1 ? 'Start vs bots' : 'Start match',
+              disabled: s.players.length < 2,
+            }),
           )
         : h('div', { class: 'center muted', style: { padding: '16px 0', fontSize: '14px' }, text: 'Waiting for the host to start…' }),
     ),
@@ -258,7 +276,6 @@ function mountGame() {
     mine: s.session?.mine ?? {},
     send: (ev) => net.send({ t: 'event', gameId: s.game.id, ...ev }),
     unlock: unlockAudio,
-    state: () => state,
   };
   let inst;
   try {

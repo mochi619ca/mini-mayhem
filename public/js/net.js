@@ -12,7 +12,6 @@ export class Net {
     this.samples = [];
     this.handlers = new Map();
     this.queue = [];
-    this.armed = false;
     this.hasConnected = false;
   }
 
@@ -31,7 +30,6 @@ export class Net {
     const ws = new WebSocket(`${proto}://${location.host}`);
     this.ws = ws;
     ws.onopen = () => {
-      this.armed = true;
       // The queue only exists for the very first connection, before the socket
       // is open. After a drop, queued events are stale by definition: they carry
       // no timestamp and would be judged against the wrong moment.
@@ -53,7 +51,6 @@ export class Net {
       this.emit(msg.t, msg);
     };
     ws.onclose = () => {
-      this.armed = false;
       this.emit('close');
       // A phone that slept can be back seconds or minutes later; retry until it
       // works rather than giving up after one attempt.

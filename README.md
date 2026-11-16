@@ -25,13 +25,16 @@ Finish-order points: with *n* players, 1st gets *n* points and last gets 1.
 Exact ties share the averaged points. After all five games the highest total
 wins; ties on total points are broken by best single-game finish.
 
+## Screens
+What each screen shows and how to capture it: `docs/screens.md`.
+
 ## Layout
 - `server.js`: HTTP + WebSocket. Holds every room in memory, owns all timing and
   scoring, and sends each phone only its own view.
 - `shared/games.js`: pure board generation (target positions, memory patterns,
-  colour sequences) plus game lengths. Imported by **both** the server and the
-  browser, so every phone draws an identical board; the server re-derives the
-  same board to validate what a phone claims.
+  colour sequences) plus game lengths. The server imports it directly; the
+  browser imports the same file from `/shared/games.js`, so every phone draws an
+  identical board and the server re-derives it to validate what a phone claims.
 - `lib/games.js`: per-game validation, scoring and bot results.
 - `lib/rank.js`: finish-order point awarding with averaged ties.
 - `public/`: the client. No build step. `js/net.js` syncs the phone clock to the

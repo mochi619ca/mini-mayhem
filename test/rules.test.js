@@ -105,6 +105,33 @@ test('rank points: total awarded per game is fixed for the player count', () => 
   }
 });
 
+test('reaction exposes the deadline it enforces, so the client can close with it', () => {
+  const def = GAMES.reaction;
+  const s = def.newSession({ seed: 'win', startsAt: 1_000_000 });
+  const cfg = def.config(s);
+  assert.equal(cfg.windowMs, 3000);
+  assert.ok(cfg.leadMs >= 1400 && cfg.leadMs <= 3200);
+  // A tap inside the last accepted millisecond still counts...
+  const last = s.goAt + cfg.windowMs - 1;
+  assert.equal(def.covers({ kind: 'tap' }, { session: s, pid: 'p1', at: last, room: {} }).ok, true);
+  // ...and one after it does not. This is the boundary the phone must mirror.
+  const late = def.newSession({ seed: 'win', startsAt: 1_000_000 });
+  assert.equal(def.covers({ kind: 'tap' }, { session: late, pid: 'p1', at: late.goAt + cfg.windowMs + 900, room: {} }).ok, false);
+});
+
+test('reaction: a slow but real tap still outranks a false start', () => {
+  const def = GAMES.reaction;
+  const s = def.newSession({ seed: 'slow', startsAt: 1_000_000 });
+  def.covers({ kind: 'tap' }, { session: s, pid: 'slow', at: s.goAt + 1500, room: {} });
+  def.covers({ kind: 'tap', early: true }, { session: s, pid: 'jumpy', at: s.goAt - 200, room: {} });
+  const rows = def.settle(s, ['slow', 'jumpy', 'absent']);
+  const by = Object.fromEntries(rows.map((r) => [r.id, r]));
+  assert.ok(by.slow.score > by.jumpy.score, 'slow tap beats false start');
+  // A false start is the deliberate failure, so it ranks below never tapping.
+  assert.ok(by.absent.score > by.jumpy.score, 'no tap beats a false start');
+  assert.ok(by.slow.score >= 0, 'a slow tap is never negative');
+});
+
 test('reaction scoring ranks a fast tap over a slow one and a false start last', () => {
   const def = GAMES.reaction;
   const startsAt = 1_000_000;
